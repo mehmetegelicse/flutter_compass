@@ -17,7 +17,7 @@ public class SwiftFlutterCompassPlugin: NSObject, FlutterPlugin, FlutterStreamHa
         location.headingFilter = 0.1;
         channel.setStreamHandler(self);
 
-        motion.deviceMotionUpdateInterval = 1.0 / 60.0;
+        motion.deviceMotionUpdateInterval = 1.0 / 200.0;
         motion.startDeviceMotionUpdates(using: CMAttitudeReferenceFrame.xMagneticNorthZVertical);
     }
 
