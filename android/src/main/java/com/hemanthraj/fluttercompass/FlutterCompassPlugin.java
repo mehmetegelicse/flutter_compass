@@ -10,6 +10,7 @@ import android.os.SystemClock;
 import android.util.Log;
 import android.view.Surface;
 import android.view.Display;
+import java.lang.Math;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -27,13 +28,13 @@ public final class FlutterCompassPlugin implements FlutterPlugin, StreamHandler 
     // Android API levels about 9, we are able to set this value ourselves rather
     // than using one of the provided constants which deliver updates too quickly
     // for our use case. The default is set to 100ms
-    private static final int SENSOR_DELAY_MICROS = 30 * 1000;
+    private static final int SENSOR_DELAY_MICROS = SensorManager.SENSOR_DELAY_GAME;
 
     // Filtering coefficient 0 < ALPHA < 1
-    private static final float ALPHA = 0.45f;
+    private static final float ALPHA = 0.99f;
 
     // Controls the compass update rate in milliseconds
-    private static final int COMPASS_UPDATE_RATE_MS = 32;
+    private static final int COMPASS_UPDATE_RATE_MS = 5;
 
     private SensorEventListener sensorEventListener;
 
@@ -128,7 +129,7 @@ public final class FlutterCompassPlugin implements FlutterPlugin, StreamHandler 
                 } else if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER && !isCompassSensorAvailable()) {
                     gravityValues = lowPassFilter(getRotationVectorFromSensorEvent(event), gravityValues);
                     updateOrientation();
-                } else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD && !isCompassSensorAvailable()) {
+                } else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD && isCompassSensorAvailable()) {
                     magneticValues = lowPassFilter(getRotationVectorFromSensorEvent(event), magneticValues);
                     updateOrientation();
                 }
@@ -274,7 +275,9 @@ public final class FlutterCompassPlugin implements FlutterPlugin, StreamHandler 
             }
 
             private void notifyCompassChangeListeners(double[] heading) {
-                events.success(heading);
+                if(Math.abs(heading[0]-lastHeading) > 0.35){
+                    events.success(heading);
+                }
                 lastHeading = (float) heading[0];
             }
 
@@ -298,6 +301,7 @@ public final class FlutterCompassPlugin implements FlutterPlugin, StreamHandler 
              * @return float filtered array of float
              */
             private float[] lowPassFilter(float[] newValues, float[] smoothedValues) {
+
                 if (smoothedValues == null) {
                     return newValues;
                 }
@@ -321,7 +325,6 @@ public final class FlutterCompassPlugin implements FlutterPlugin, StreamHandler 
                     // appears to throw an exception if rotation vector has length > 4.
                     // For the purposes of this class the first 4 values of the
                     // rotation vector are sufficient (see crbug.com/335298 for details).
-                    // Only affects Android 4.3
                     System.arraycopy(event.values, 0, truncatedRotationVectorValue, 0, 4);
                     return truncatedRotationVectorValue;
                 } else {
